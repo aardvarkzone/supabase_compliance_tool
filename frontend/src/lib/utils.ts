@@ -4,13 +4,10 @@ export type SupabaseCredentials = {
   url: string;
   serviceRoleKey: string;
   managementApiKey: string;
-  projectRef?: string; // Optional for functions that derive it dynamically
 };
 
-// Minimal credentials for creating a Supabase client
 export type ClientCredentials = Pick<SupabaseCredentials, 'url' | 'serviceRoleKey'>;
 
-// Create a Supabase client using minimal credentials
 export const createSupabaseClient = ({ url, serviceRoleKey }: ClientCredentials) => {
   if (!url || !serviceRoleKey) {
     throw new Error('Missing required Supabase credentials: `url` or `serviceRoleKey`');
@@ -18,7 +15,6 @@ export const createSupabaseClient = ({ url, serviceRoleKey }: ClientCredentials)
   return createClient(url, serviceRoleKey);
 };
 
-// Call Supabase Management API with a valid management API key
 export const callManagementApi = async (
   endpoint: string,
   { managementApiKey }: Pick<SupabaseCredentials, 'managementApiKey'>,

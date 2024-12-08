@@ -7,6 +7,21 @@ export type CheckResult = {
   message?: string;
 };
 
+type SubscriptionResponse = {
+  tier: string;
+  [key: string]: any;
+};
+
+type BackupInfo = {
+  pitr_enabled: boolean;
+  [key: string]: any;
+};
+
+const extractProjectRef = (url: string): string | null => {
+  const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
+  return match ? match[1] : null;
+};
+
 export async function checkMFA(supabase: SupabaseClient): Promise<CheckResult> {
   try {
     const { data: { users }, error } = await supabase.auth.admin.listUsers();
@@ -67,37 +82,83 @@ export async function checkRLS(supabase: SupabaseClient): Promise<CheckResult> {
 }
 
 export async function checkPITR(credentials: SupabaseCredentials): Promise<CheckResult> {
-  try {
-    const subscription = await callManagementApi(
-      `projects/${credentials.projectRef}/subscription`,
-      credentials
-    );
+  const projectRef = extractProjectRef(credentials.url);
+  if (!projectRef) {
+    return {
+      status: 'error',
+      message: 'Invalid Supabase URL. Unable to extract project reference.',
+      details: { url: credentials.url },
+    };
+  }
 
-    if (subscription.tier === 'free') {
+  try {
+    let subscription: SubscriptionResponse;
+    
+    try {
+      subscription = await callManagementApi(
+        `projects/${projectRef}/subscription`,
+        credentials
+      ) as SubscriptionResponse;
+    } catch (error) {
       return {
         status: 'fail',
-        message: 'Point in Time Recovery is not available on the free tier',
-        details: { hint: 'Upgrade to a paid plan to enable PITR' },
+        message: 'Point in Time Recovery (PITR) is not available on the free tier. Upgrade to Pro plan or higher to enable this feature.',
+        details: {
+          currentTier: 'free',
+          recommendation: 'Upgrade to Pro plan or higher',
+          learnMore: 'https://supabase.com/pricing'
+        },
       };
     }
 
-    const backupInfo = await callManagementApi(
-      `projects/${credentials.projectRef}/database/backups/info`,
-      credentials
-    );
+    if (subscription.tier.toLowerCase() === 'free') {
+      return {
+        status: 'fail',
+        message: 'Point in Time Recovery (PITR) is not available on the free tier. Upgrade to Pro plan or higher to enable this feature.',
+        details: {
+          currentTier: 'free',
+          recommendation: 'Upgrade to Pro plan or higher',
+          learnMore: 'https://supabase.com/pricing'
+        },
+      };
+    }
 
-    return {
-      status: backupInfo.pitr_enabled ? 'pass' : 'fail',
-      message: backupInfo.pitr_enabled
-        ? 'Point in Time Recovery is enabled'
-        : 'Point in Time Recovery is available but not enabled.',
-      details: backupInfo,
-    };
-  } catch (error: any) {
+    try {
+      const backupInfo = await callManagementApi(
+        `projects/${projectRef}/database/backups/info`,
+        credentials
+      ) as BackupInfo;
+
+      return {
+        status: backupInfo.pitr_enabled ? 'pass' : 'fail',
+        message: backupInfo.pitr_enabled
+          ? 'Point in Time Recovery is enabled'
+          : 'Point in Time Recovery is available but not enabled. You can enable it in your project settings.',
+        details: {
+          ...backupInfo,
+          tier: subscription.tier,
+          configuration: backupInfo.pitr_enabled ? 'enabled' : 'disabled'
+        },
+      };
+    } catch (error) {
+      return {
+        status: 'fail',
+        message: 'Point in Time Recovery is available but not configured. You can enable it in your project settings.',
+        details: {
+          tier: subscription.tier,
+          recommendation: 'Configure PITR in project settings',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        },
+      };
+    }
+  } catch (error) {
     return {
       status: 'error',
-      message: `Failed to check PITR: ${error.message}`,
-      details: error,
+      message: 'Failed to check PITR status. Please verify your credentials and try again.',
+      details: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        recommendation: 'Verify your Management API key and project URL'
+      },
     };
   }
 }

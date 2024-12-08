@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { createSupabaseClient, type ClientCredentials, type SupabaseCredentials } from '@/lib/supabase';
+import { Eye, EyeOff } from 'lucide-react';
+import { createSupabaseClient, type SupabaseCredentials } from '@/lib/supabase';
 import { 
   checkMFA, 
   checkRLS, 
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import EvidenceLog from '@/components/EvidenceLog';
+import { getChatCompletion, createUserMessage } from '@/lib/gpt';
 
 type Results = {
   mfa: CheckResult;
@@ -27,10 +29,21 @@ type EvidenceEntry = {
   details: string;
 };
 
+type KeyField = 'serviceRoleKey' | 'managementApiKey';
+
 export default function ComplianceChecker() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState<SupabaseCredentials>({
+    url: '',
+    serviceRoleKey: '',
+    managementApiKey: ''
+  });
+  const [showKeys, setShowKeys] = useState({
+    serviceRoleKey: false,
+    managementApiKey: false
+  });
+  const [validationErrors, setValidationErrors] = useState({
     url: '',
     serviceRoleKey: '',
     managementApiKey: ''
@@ -41,6 +54,9 @@ export default function ComplianceChecker() {
     pitr: { status: 'pending' }
   });
   const [evidence, setEvidence] = useState<EvidenceEntry[]>([]);
+  const [chatMessages, setChatMessages] = useState<{ user: string; bot?: string }[]>([]);
+  const [currentChatInput, setCurrentChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   const clearEvidence = () => {
     if (window.confirm('Are you sure you want to clear all evidence logs?')) {
@@ -48,9 +64,49 @@ export default function ComplianceChecker() {
     }
   };
 
+  const clearChat = () => {
+    if (window.confirm('Are you sure you want to clear the chat history?')) {
+      setChatMessages([]);
+      setCurrentChatInput('');
+    }
+  };
+
   const extractProjectRef = (url: string): string | null => {
     const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
     return match ? match[1] : null;
+  };
+
+  const validateField = (field: string, value: string): string => {
+    switch (field) {
+      case 'url':
+        if (value && !value.includes('supabase.co')) {
+          return 'Must be a valid Supabase URL (e.g., https://project.supabase.co)';
+        }
+        break;
+      case 'serviceRoleKey':
+        if (value && !value.startsWith('eyJ')) {
+          return 'Service Role Key must start with "eyJ"';
+        }
+        break;
+      case 'managementApiKey':
+        if (value && !value.startsWith('sbp_')) {
+          return 'Management API Key must start with "sbp_"';
+        }
+        break;
+    }
+    return '';
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setCredentials(prev => ({ ...prev, [field]: value }));
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: validateField(field, value)
+    }));
+  };
+
+  const toggleKeyVisibility = (field: KeyField) => {
+    setShowKeys(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
   const validateCredentials = (): boolean => {
@@ -95,7 +151,7 @@ export default function ComplianceChecker() {
           message: `RLS Check Error: ${e.message}`,
           details: e.details,
         })),
-        checkPITR({ ...credentials, projectRef }).catch(e => ({
+        checkPITR({ ...credentials }).catch(e => ({
           status: 'error' as const,
           message: `PITR Check Error: ${e.message}`,
           details: e.details,
@@ -136,59 +192,124 @@ export default function ComplianceChecker() {
       );
     }
 
-    return result.message && <p className="mt-2 text-sm text-gray-600">{result.message}</p>;
+    return result.message && <p className="mt-2 text-sm text-gray-400">{result.message}</p>;
+  };
+
+  const handleSendChat = async () => {
+    if (!currentChatInput.trim()) return;
+
+    const userMessage = { user: currentChatInput };
+    setChatMessages((prev) => [...prev, userMessage]);
+    setCurrentChatInput('');
+    setChatLoading(true);
+
+    try {
+      const botResponse = await getChatCompletion([
+        createUserMessage(currentChatInput),
+      ]);
+      setChatMessages((prev) => [...prev, { user: currentChatInput, bot: botResponse.content }]);
+    } catch (error) {
+      console.error('Error fetching chat response:', error);
+      setChatMessages((prev) => [...prev, { user: currentChatInput, bot: 'Error processing your request.' }]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto">
         <Card className="mb-8 card-override">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-white">Supabase Project Credentials</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Project URL</label>
-              <Input
-                value={credentials.url}
-                onChange={(e) => setCredentials(prev => ({ ...prev, url: e.target.value }))}
-                placeholder="https://your-project.supabase.co"
-                className="input-override font-mono"
-              />
+              <div className="relative">
+                <Input
+                  className="input-override w-full"
+                  value={credentials.url}
+                  onChange={(e) => handleInputChange('url', e.target.value)}
+                  placeholder="https://your-project.supabase.co"
+                />
+                {validationErrors.url && (
+                  <Alert variant="destructive" className="mt-1">
+                    <AlertDescription>{validationErrors.url}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
-            <div className="space-y-1">
+
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Service Role Key</label>
-              <Input
-                type="password"
-                value={credentials.serviceRoleKey}
-                onChange={(e) => setCredentials(prev => ({ ...prev, serviceRoleKey: e.target.value }))}
-                placeholder="eyJhbG..."
-                className="input-override font-mono"
-              />
+              <div className="relative">
+                <div className="flex">
+                  <Input
+                    className="input-override flex-grow"
+                    type={showKeys.serviceRoleKey ? 'text' : 'password'}
+                    value={credentials.serviceRoleKey}
+                    onChange={(e) => handleInputChange('serviceRoleKey', e.target.value)}
+                    placeholder="eyJhbG..."
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="ml-2"
+                    onClick={() => toggleKeyVisibility('serviceRoleKey' as KeyField)}
+                  >
+                    {showKeys.serviceRoleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {validationErrors.serviceRoleKey && (
+                  <Alert variant="destructive" className="mt-1">
+                    <AlertDescription>{validationErrors.serviceRoleKey}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
-            <div className="space-y-1">
+
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Management API Key</label>
-              <Input
-                type="password"
-                value={credentials.managementApiKey}
-                onChange={(e) => setCredentials(prev => ({ ...prev, managementApiKey: e.target.value }))}
-                placeholder="sbp_..."
-                className="input-override font-mono"
-              />
+              <div className="relative">
+                <div className="flex">
+                  <Input
+                    className="input-override flex-grow"
+                    type={showKeys.managementApiKey ? 'text' : 'password'}
+                    value={credentials.managementApiKey}
+                    onChange={(e) => handleInputChange('managementApiKey', e.target.value)}
+                    placeholder="sbp_..."
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="ml-2"
+                    onClick={() => toggleKeyVisibility('managementApiKey')}
+                  >
+                    {showKeys.managementApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {validationErrors.managementApiKey && (
+                  <Alert variant="destructive" className="mt-1">
+                    <AlertDescription>{validationErrors.managementApiKey}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
+
+            <Button
+              className="button-override w-full mt-4"
+              onClick={handleRunChecks}
+              disabled={loading || !credentials.url || !credentials.serviceRoleKey || !credentials.managementApiKey}
+            >
+              {loading ? 'Running Checks...' : 'Run Checks'}
+            </Button>
           </CardContent>
         </Card>
 
         <Card className="card-override">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="text-white">Compliance Status</CardTitle>
-            <Button
-              onClick={handleRunChecks}
-              disabled={loading || !credentials.url || !credentials.serviceRoleKey || !credentials.managementApiKey}
-              className="button-override"
-            >
-              {loading ? 'Running Checks...' : 'Run Checks'}
-            </Button>
           </CardHeader>
           <CardContent className="space-y-6">
             {Object.entries(results).map(([key, result]) => (
@@ -218,6 +339,44 @@ export default function ComplianceChecker() {
         </Card>
 
         <EvidenceLog evidence={evidence} onClearEvidence={clearEvidence} />
+
+        <Card className="mt-8 card-override">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-white">Assistant Chatbot</CardTitle>
+            <Button 
+              onClick={clearChat}
+              className="button-override"
+            >
+              Clear Chat
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} className="p-3 rounded-lg bg-gray-800/30">
+                  <p className="text-white"><strong>User:</strong> {msg.user}</p>
+                  {msg.bot && <p className="text-gray-300 mt-2"><strong>Assistant:</strong> {msg.bot}</p>}
+                </div>
+              ))}
+              <div className="mt-4 flex gap-2">
+                <Input
+                  className="input-override flex-grow"
+                  value={currentChatInput}
+                  onChange={(e) => setCurrentChatInput(e.target.value)}
+                  placeholder="Ask me anything..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendChat()}
+                />
+                <Button 
+                  onClick={handleSendChat} 
+                  disabled={chatLoading}
+                  className="button-override"
+                >
+                  {chatLoading ? 'Sending...' : 'Send'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
