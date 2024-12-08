@@ -94,23 +94,6 @@ The AI assistant feature requires an OpenAI API key. For security reasons:
 5. Use the AI assistant for guidance on addressing any issues
 6. Export compliance evidence as needed
 
-## Project Structure
-
-```
-├── components/
-│   ├── ComplianceChecker.tsx    # Main compliance checking component
-│   ├── EvidenceLog.tsx          # Evidence logging component
-│   └── ui/                      # UI components (shadcn/ui)
-├── lib/
-│   ├── checks.ts               # Compliance check implementations
-│   ├── supabase.ts            # Supabase client configuration
-│   └── gpt.ts                 # AI assistant integration
-├── app/
-│   ├── layout.tsx             # Root layout component
-│   └── page.tsx               # Main page component
-└── utils.ts                   # Utility functions
-```
-
 ## Compliance Checks Details
 
 ### MFA Check
@@ -143,13 +126,11 @@ The integrated chatbot provides:
 - Guidance on compliance requirements
 - Explanations of check results
 - Recommendations for addressing issues
-- Context-aware compliance advice
 
 To use the AI assistant:
 1. Ensure your OpenAI API key is properly configured
 2. Type your question in the chat interface
 3. Get instant responses about compliance issues and solutions
-4. Export chat history if needed for documentation
 
 ## Security Considerations
 
@@ -189,23 +170,28 @@ The application includes comprehensive error handling for:
 - Permission problems
 - Subscription tier limitations
 
-## License
-
-MIT License - See LICENSE file for details
-
 ## Support
 
 - For code-related issues, please open an issue in the GitHub repository
 - For Supabase-related questions, refer to [Supabase documentation](https://supabase.com/docs)
 - For OpenAI API questions, check [OpenAI's documentation](https://platform.openai.com/docs)
-- For urgent support, contact the maintainers directly
 
 ## Acknowledgments
 
 - Built with [Next.js](https://nextjs.org/)
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - Powered by [Supabase](https://supabase.com/) and [OpenAI](https://openai.com/)
+- Development assisted by Anthropic's Claude AI:
+  - GPT prompt engineering guidance
+  - Code refactoring suggestions
+  - Documentation structure and content
 
-## Changelog
+## Future Work
 
-See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.
+- **Enhanced AI Assistant**: Expand the AI capabilities to provide automated remediation scripts, proactive security recommendations, and natural language querying of compliance history
+
+- **Compliance Templates**: Add pre-configured compliance templates for common standards like SOC 2, HIPAA, and GDPR, allowing teams to quickly implement industry-standard security practices
+
+- **CI/CD Integration**: Implement webhook support to integrate compliance checks into deployment pipelines, ensuring continuous compliance monitoring during development
+
+- **Team Collaboration**: Add multi-user support with role-based access control and real-time notifications for compliance status changes through Slack/Discord integration
