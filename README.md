@@ -1,3 +1,5 @@
+Here is the updated README with the specified additions:
+
 # Supabase Compliance Checker
 
 A web application for verifying and enforcing security compliance requirements in Supabase projects. This tool performs automated checks for Multi-Factor Authentication (MFA), Row Level Security (RLS), and Point in Time Recovery (PITR) configurations, with an integrated AI assistant for compliance guidance.
@@ -7,7 +9,7 @@ A web application for verifying and enforcing security compliance requirements i
 ### Project Credentials Screen
 ![Project Credentials](./assets/readme0.jpg)
 
-### Compliance Status Dashboard
+### Compliance Status Dashboard 
 ![Compliance Status](./assets/readme1.jpg)
 
 ### Evidence Log and AI Assistant
@@ -16,19 +18,19 @@ A web application for verifying and enforcing security compliance requirements i
 ## Features
 
 - **Automated Compliance Checks**
-  - Multi-Factor Authentication (MFA) status verification for all users
+  - Multi-Factor Authentication (MFA) status verification for all users 
   - Row Level Security (RLS) configuration checks for database tables
   - Point in Time Recovery (PITR) settings validation
   - Subscription tier compatibility checks
 
-- **Security Features**
+- **Security Features** 
   - Secure credential input with show/hide toggles
   - Input validation for all API keys and URLs
   - Separate handling of service role and management API keys
 
 - **Evidence Logging**
   - Detailed timestamped logs of all compliance checks
-  - Export evidence in CSV or JSON format
+  - Export evidence in CSV or JSON format 
   - Clear audit trail for compliance documentation
 
 - **AI Assistant**
@@ -41,7 +43,7 @@ A web application for verifying and enforcing security compliance requirements i
 
 - Node.js and npm installed
 - A Supabase project
-- Service Role API key from your Supabase project
+- Service Role API key from your Supabase project 
 - Management API key from your Supabase dashboard
 - OpenAI API key for the AI assistant (get one at https://platform.openai.com/api-keys)
 
@@ -54,7 +56,7 @@ cd supabase-compliance-checker
 ```
 
 2. Install dependencies:
-```bash
+```bash 
 npm install
 ```
 
@@ -73,20 +75,11 @@ OPENAI_API_KEY=your_api_key_here  # Get this from https://platform.openai.com/ap
 npm run dev
 ```
 
-## Important Security Note
-
-The AI assistant feature requires an OpenAI API key. For security reasons:
-- Never commit your API key to version control
-- Keep your API key private and secure
-- Consider implementing API key usage limits
-- Monitor your API key usage regularly
-- Rotate your API key periodically
-
 ## Usage
 
 1. Access the application through your web browser
 2. Enter your Supabase project credentials:
-   - Project URL (e.g., https://your-project.supabase.co)
+   - Project URL (e.g., https://your-project.supabase.co) 
    - Service Role Key (starts with 'eyJ')
    - Management API Key (starts with 'sbp_')
 3. Click "Run Checks" to start the compliance assessment
@@ -101,13 +94,13 @@ The AI assistant feature requires an OpenAI API key. For security reasons:
 - Identifies users without MFA enabled
 - Provides detailed user-level compliance reporting
 
-### RLS Check
+### RLS Check 
 - Validates RLS status for all public tables
 - Excludes system tables (auth, storage, etc.)
 - Reports on tables requiring RLS implementation
 
 ### PITR Check
-- Verifies Point in Time Recovery configuration
+- Verifies Point in Time Recovery configuration 
 - Checks subscription tier compatibility
 - Provides upgrade guidance if needed
 
@@ -115,7 +108,7 @@ The AI assistant feature requires an OpenAI API key. For security reasons:
 
 The tool maintains comprehensive logs including:
 - Timestamp of each compliance check
-- Check type and result status
+- Check type and result status 
 - Detailed findings and recommendations
 - Export options in multiple formats (JSON, CSV)
 - Clear audit trail for compliance documentation
@@ -123,28 +116,28 @@ The tool maintains comprehensive logs including:
 ## AI Assistant
 
 The integrated chatbot provides:
-- Guidance on compliance requirements
+- Guidance on compliance requirements  
 - Explanations of check results
 - Recommendations for addressing issues
 
 To use the AI assistant:
-1. Ensure your OpenAI API key is properly configured
+1. Ensure your OpenAI API key is properly configured 
 2. Type your question in the chat interface
-3. Get instant responses about compliance issues and solutions
+3. Get instant responses about compliance issues and solutions  
 
 ## Security Considerations
 
 - All API keys are handled securely with show/hide options
 - Input validation prevents malformed credentials
-- Service Role Key and Management API Key are kept separate
+- Service Role Key and Management API Key are kept separate 
 - Credentials are never stored or logged
 - All API calls are made server-side
-- OpenAI API key is securely stored in environment variables
+- OpenAI API key is securely stored in environment variables  
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch  
 3. Commit your changes (excluding any API keys or sensitive data)
 4. Push to the branch
 5. Create a Pull Request
@@ -153,20 +146,20 @@ To use the AI assistant:
 
 Run the test suite:
 ```bash
-npm run test
+npm run test  
 ```
 
 For end-to-end testing:
-```bash
+```bash 
 npm run test:e2e
 ```
 
 ## Error Handling
 
 The application includes comprehensive error handling for:
-- Invalid credentials
+- Invalid credentials 
 - API rate limits
-- Network issues
+- Network issues  
 - Permission problems
 - Subscription tier limitations
 
@@ -179,12 +172,26 @@ The application includes comprehensive error handling for:
 ## Acknowledgments
 
 - Built with [Next.js](https://nextjs.org/)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- UI components from [shadcn/ui](https://ui.shadcn.com/) 
 - Powered by [Supabase](https://supabase.com/) and [OpenAI](https://openai.com/)
 - Development assisted by Anthropic's Claude AI:
   - GPT prompt engineering guidance
-  - Code refactoring suggestions
+  - Code refactoring suggestions 
   - Documentation structure and content
+
+## Assumptions
+
+For the compliance checks, the following setup is assumed:
+- Users with varying MFA statuses are stored in a "users" table.
+- Row-Level Security (RLS) is enabled on tables, with policies restricting access to certain rows.
+
+## Supabase APIs Used
+
+The app uses the following Supabase APIs for the compliance checks:  
+
+- **MFA**: `supabase.auth.admin.listUsers()` to verify user MFA statuses.  
+- **RLS**: `supabase.rpc('get_tables_info')` to ensure RLS is enabled on all tables.  
+- **PITR**: Supabase Management API endpoints to check project tier and PITR configuration.
 
 ## Future Work
 
@@ -192,6 +199,6 @@ The application includes comprehensive error handling for:
 
 - **Compliance Templates**: Add pre-configured compliance templates for common standards like SOC 2, HIPAA, and GDPR, allowing teams to quickly implement industry-standard security practices
 
-- **CI/CD Integration**: Implement webhook support to integrate compliance checks into deployment pipelines, ensuring continuous compliance monitoring during development
+- **CI/CD Integration**: Implement webhook support to integrate compliance checks into deployment pipelines, ensuring continuous compliance monitoring during development 
 
 - **Team Collaboration**: Add multi-user support with role-based access control and real-time notifications for compliance status changes through Slack/Discord integration
