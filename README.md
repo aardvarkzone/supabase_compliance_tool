@@ -142,18 +142,6 @@ To use the AI assistant:
 4. Push to the branch
 5. Create a Pull Request
 
-## Testing
-
-Run the test suite:
-```bash
-npm run test  
-```
-
-For end-to-end testing:
-```bash 
-npm run test:e2e
-```
-
 ## Error Handling
 
 The application includes comprehensive error handling for:
