@@ -2,7 +2,16 @@
 
 A web application for verifying and enforcing security compliance requirements in Supabase projects. This tool performs automated checks for Multi-Factor Authentication (MFA), Row Level Security (RLS), and Point in Time Recovery (PITR) configurations, with an integrated AI assistant for compliance guidance.
 
-![Compliance Checker Screenshot](/api/placeholder/800/400)
+## Screenshots
+
+### Project Credentials Screen
+![Project Credentials](./assets/readme0.jpg)
+
+### Compliance Status Dashboard
+![Compliance Status](./assets/readme1.jpg)
+
+### Evidence Log and AI Assistant
+![Evidence Log](./assets/readme2.jpg)
 
 ## Features
 
