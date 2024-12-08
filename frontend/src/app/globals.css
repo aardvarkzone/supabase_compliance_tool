@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background-color: #0a192f;
+}
+
+html,
+body,
+body > div {
+  background-color: var(--background-color);
+  min-height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: white;
+}
+
+#__next {
+  background-color: var(--background-color);
+  min-height: 100vh;
+}
+
+.card-override {
+  background-color: rgba(17, 34, 64, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.input-override {
+  background-color: rgba(30, 58, 138, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.input-override::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.button-override {
+  background-color: #eab308 !important;
+  color: #0a192f !important;
+  font-weight: 600 !important;
+}
+
+.button-override:hover {
+  background-color: #ca8a04 !important;
+}
