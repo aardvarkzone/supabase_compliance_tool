@@ -136,7 +136,7 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
         `projects/${projectRef}/subscription`,
         credentials
       ) as SubscriptionResponse;
-    } catch (error) {
+    } catch (_) {
       return {
         status: 'fail',
         message: 'Point in Time Recovery (PITR) is not available on the free tier. Upgrade to Pro plan or higher to enable this feature.',
