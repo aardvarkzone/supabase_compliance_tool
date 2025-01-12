@@ -1,5 +1,3 @@
-Here is the updated README with the specified additions:
-
 # Supabase Compliance Checker
 
 A web application for verifying and enforcing security compliance requirements in Supabase projects. This tool performs automated checks for Multi-Factor Authentication (MFA), Row Level Security (RLS), and Point in Time Recovery (PITR) configurations, with an integrated AI assistant for compliance guidance.
