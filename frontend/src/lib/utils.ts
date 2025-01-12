@@ -42,7 +42,10 @@ export const callManagementApi = async (
     }
 
     return response.json();
-  } catch (error: any) {
-    throw new Error(`Error during Management API call: ${error.message}`);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error during Management API call: ${error.message}`);
+    }
+    throw new Error('An unknown error occurred during the Management API call.');
   }
 };
