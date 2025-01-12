@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import EvidenceLog from '@/components/EvidenceLog';
 import { getChatCompletion, createUserMessage } from '@/lib/gpt';
 
-// Type definitions
 type Results = {
   mfa: CheckResult;
   rls: CheckResult;
@@ -58,7 +57,6 @@ const INITIAL_VALIDATION_ERRORS: ValidationErrors = {
 };
 
 export default function ComplianceChecker() {
-  // State management
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState<SupabaseCredentials>(INITIAL_CREDENTIALS);
@@ -73,7 +71,6 @@ export default function ComplianceChecker() {
   const [currentChatInput, setCurrentChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
 
-  // Helper functions
   const extractProjectRef = (url: string): string | null => {
     const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
     return match ? match[1] : null;
@@ -100,7 +97,6 @@ export default function ComplianceChecker() {
     return '';
   };
 
-  // Event handlers
   const handleInputChange = (field: string, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
     setValidationErrors(prev => ({

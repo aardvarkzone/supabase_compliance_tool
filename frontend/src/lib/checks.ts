@@ -1,7 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { callManagementApi, type SupabaseCredentials } from './utils';
 
-// Type Definitions
 export type JSONValue = 
   | string
   | number
@@ -37,7 +36,6 @@ type BackupInfo = {
   [key: string]: JSONValue;
 };
 
-// Helper Functions
 const extractProjectRef = (url: string): string | null => {
   const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
   return match ? match[1] : null;
@@ -54,7 +52,6 @@ const safeJsonValue = (error: unknown): JSONValue => {
   return String(error);
 };
 
-// Main Check Functions
 export async function checkMFA(supabase: SupabaseClient): Promise<CheckResult> {
   try {
     const { data: { users }, error } = await supabase.auth.admin.listUsers();
@@ -95,7 +92,6 @@ export async function checkRLS(supabase: SupabaseClient): Promise<CheckResult> {
       };
     }
 
-    // Type the table structure but still allow flexible data
     type TableData = {
       rls_enabled: boolean;
       [key: string]: unknown;
