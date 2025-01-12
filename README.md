@@ -2,6 +2,8 @@
 
 A web application for verifying and enforcing security compliance requirements in Supabase projects. This tool performs automated checks for Multi-Factor Authentication (MFA), Row Level Security (RLS), and Point in Time Recovery (PITR) configurations, with an integrated AI assistant for compliance guidance.
 
+🚀 **Live Demo**: [https://supabase-compliance-tool-kxdr.vercel.app/](https://supabase-compliance-tool-kxdr.vercel.app/)
+
 ## Screenshots
 
 ### Project Credentials Screen
@@ -36,6 +38,12 @@ A web application for verifying and enforcing security compliance requirements i
   - Context-aware responses based on check results
   - Help with interpreting compliance findings
   - Powered by GPT API (requires your own API key)
+
+## Quick Start
+
+Try the live demo at: [https://supabase-compliance-tool-kxdr.vercel.app/](https://supabase-compliance-tool-kxdr.vercel.app/)
+
+Or run locally:
 
 ## Prerequisites
 
@@ -75,7 +83,7 @@ npm run dev
 
 ## Usage
 
-1. Access the application through your web browser
+1. Access the application through your web browser (or use the [live demo](https://supabase-compliance-tool-kxdr.vercel.app/))
 2. Enter your Supabase project credentials:
    - Project URL (e.g., https://your-project.supabase.co) 
    - Service Role Key (starts with 'eyJ')
