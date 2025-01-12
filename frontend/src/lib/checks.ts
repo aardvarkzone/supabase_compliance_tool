@@ -136,6 +136,7 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
         `projects/${projectRef}/subscription`,
         credentials
       ) as SubscriptionResponse;
+      // @ts-ignore: Unused error variable
     } catch (error) {
       return {
         status: 'fail',
