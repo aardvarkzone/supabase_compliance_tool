@@ -43,6 +43,18 @@ interface ChatOptions {
   maxTokens?: number;
 }
 
+interface OpenAIErrorResponse {
+  response?: {
+    data?: {
+      error?: {
+        message?: string;
+      };
+    };
+    status?: number;
+  };
+  message?: string;
+}
+
 const SUPABASE_SYSTEM_PROMPT = `You are a specialized Supabase assistant with expertise in database security, compliance, and best practices. Your role is to help users understand and implement security measures in their Supabase projects.
 
 Key areas of focus:
@@ -70,7 +82,7 @@ export class OpenAIError extends Error {
   constructor(
     message: string,
     public readonly statusCode?: number,
-    public readonly originalError?: any
+    public readonly originalError?: unknown
   ) {
     super(message);
     this.name = 'OpenAIError';
@@ -113,13 +125,14 @@ export const getChatCompletion = async (
         } : undefined,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof OpenAIError) {
       throw error;
     }
 
-    const message = error.response?.data?.error?.message || error.message || DEFAULT_ERROR_MESSAGE;
-    const statusCode = error.response?.status;
+    const apiError = error as OpenAIErrorResponse;
+    const message = apiError.response?.data?.error?.message || apiError.message || DEFAULT_ERROR_MESSAGE;
+    const statusCode = apiError.response?.status;
     
     throw new OpenAIError(message, statusCode, error);
   }
@@ -152,9 +165,10 @@ export const getStreamingChatCompletion = async (
         onMessage(delta);
       }
     }
-  } catch (error: any) {
-    const message = error.response?.data?.error?.message || error.message || DEFAULT_ERROR_MESSAGE;
-    const statusCode = error.response?.status;
+  } catch (error: unknown) {
+    const apiError = error as OpenAIErrorResponse;
+    const message = apiError.response?.data?.error?.message || apiError.message || DEFAULT_ERROR_MESSAGE;
+    const statusCode = apiError.response?.status;
     
     throw new OpenAIError(message, statusCode, error);
   }

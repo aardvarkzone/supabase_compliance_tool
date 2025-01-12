@@ -54,8 +54,8 @@ const safeJsonValue = (error: unknown): JSONValue => {
 
 export async function checkMFA(supabase: SupabaseClient): Promise<CheckResult> {
   try {
-    const { data: { users }, error } = await supabase.auth.admin.listUsers();
-    if (error) throw error;
+    const { data: { users }, error: listUsersError } = await supabase.auth.admin.listUsers();
+    if (listUsersError) throw listUsersError;
 
     const userMFAStatus: UserMFAStatus[] = users.map(user => ({
       email: user.email,
@@ -83,8 +83,8 @@ export async function checkMFA(supabase: SupabaseClient): Promise<CheckResult> {
 
 export async function checkRLS(supabase: SupabaseClient): Promise<CheckResult> {
   try {
-    const { data, error } = await supabase.rpc('get_tables_info');
-    if (error || !data) {
+    const { data, error: rpcError } = await supabase.rpc('get_tables_info');
+    if (rpcError || !data) {
       return {
         status: 'pass',
         message: 'No public tables found or RLS configuration not needed yet.',
