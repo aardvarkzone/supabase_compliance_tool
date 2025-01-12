@@ -33,6 +33,7 @@ type KeyField = 'serviceRoleKey' | 'managementApiKey';
 
 export default function ComplianceChecker() {
   const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState<SupabaseCredentials>({
     url: '',
@@ -129,8 +130,6 @@ export default function ComplianceChecker() {
 
   const handleRunChecks = async () => {
     if (!validateCredentials()) return;
-
-    const projectRef = extractProjectRef(credentials.url)!;
     try {
       setLoading(true);
       setError('');
@@ -141,20 +140,20 @@ export default function ComplianceChecker() {
       });
 
       const [mfaResult, rlsResult, pitrResult] = await Promise.all([
-        checkMFA(supabase).catch(e => ({
+        checkMFA(supabase).catch((e: Error) => ({
           status: 'error' as const,
           message: `MFA Check Error: ${e.message}`,
-          details: e.details,
+          details: e.stack,
         })),
-        checkRLS(supabase).catch(e => ({
+        checkRLS(supabase).catch((e: Error) => ({
           status: 'error' as const,
           message: `RLS Check Error: ${e.message}`,
-          details: e.details,
+          details: e.stack,
         })),
-        checkPITR({ ...credentials }).catch(e => ({
+        checkPITR({ ...credentials }).catch((e: Error) => ({
           status: 'error' as const,
           message: `PITR Check Error: ${e.message}`,
-          details: e.details,
+          details: e.stack,
         })),
       ]);
 
@@ -166,9 +165,9 @@ export default function ComplianceChecker() {
         { timestamp, check: 'PITR', status: pitrResult.status, details: pitrResult.message || '' },
       ]);
       setResults({ mfa: mfaResult, rls: rlsResult, pitr: pitrResult });
-    } catch (error: any) {
-      setError(`Failed to run checks: ${error.message}`);
-    } finally {
+    } catch (error) {
+      setError(`Failed to run checks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
       setLoading(false);
     }
   };
