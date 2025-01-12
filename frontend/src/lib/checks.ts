@@ -1,33 +1,66 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { callManagementApi, type SupabaseCredentials } from './utils';
 
+// Type Definitions
+export type JSONValue = 
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JSONValue }
+  | JSONValue[];
+
 export type CheckResult = {
   status: 'pass' | 'fail' | 'pending' | 'error';
-  details?: any;
-  message?: string;
+  details: JSONValue;
+  message: string;
+};
+
+export type TableInfo = {
+  table_name: string;
+  rls_enabled: boolean;
+  schema: string;
+};
+
+type UserMFAStatus = {
+  email: string | null | undefined;
+  mfaEnabled: boolean;
 };
 
 type SubscriptionResponse = {
   tier: string;
-  [key: string]: any;
+  [key: string]: JSONValue;
 };
 
 type BackupInfo = {
   pitr_enabled: boolean;
-  [key: string]: any;
+  [key: string]: JSONValue;
 };
 
+// Helper Functions
 const extractProjectRef = (url: string): string | null => {
   const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
   return match ? match[1] : null;
 };
 
+const safeJsonValue = (error: unknown): JSONValue => {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+      stack: error.stack || '',
+    };
+  }
+  return String(error);
+};
+
+// Main Check Functions
 export async function checkMFA(supabase: SupabaseClient): Promise<CheckResult> {
   try {
     const { data: { users }, error } = await supabase.auth.admin.listUsers();
     if (error) throw error;
 
-    const userMFAStatus = users.map(user => ({
+    const userMFAStatus: UserMFAStatus[] = users.map(user => ({
       email: user.email,
       mfaEnabled: Boolean(user.factors?.length),
     }));
@@ -37,16 +70,16 @@ export async function checkMFA(supabase: SupabaseClient): Promise<CheckResult> {
 
     return {
       status: allEnabled ? 'pass' : 'fail',
-      details: userMFAStatus,
+      details: userMFAStatus as JSONValue,
       message: allEnabled
         ? `MFA is enabled for all ${userMFAStatus.length} users`
         : `MFA is enabled for ${enabledCount} out of ${userMFAStatus.length} users`,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       status: 'error',
-      message: `Failed to check MFA status: ${error.message}`,
-      details: error,
+      message: `Failed to check MFA status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: safeJsonValue(error),
     };
   }
 }
@@ -58,25 +91,33 @@ export async function checkRLS(supabase: SupabaseClient): Promise<CheckResult> {
       return {
         status: 'pass',
         message: 'No public tables found or RLS configuration not needed yet.',
-        details: [],
+        details: [] as JSONValue
       };
     }
 
-    const allEnabled = data.every((table: any) => table.rls_enabled);
-    const enabledCount = data.filter((table: any) => table.rls_enabled).length;
+    // Type the table structure but still allow flexible data
+    type TableData = {
+      rls_enabled: boolean;
+      [key: string]: unknown;
+    };
+
+    const tableData = data as TableData[];
+    const allEnabled = tableData.every(table => table.rls_enabled);
+    const enabledCount = tableData.filter(table => table.rls_enabled).length;
 
     return {
       status: allEnabled ? 'pass' : 'fail',
-      details: data,
+      details: data as JSONValue,
       message: allEnabled
-        ? `RLS is enabled on all ${data.length} tables`
-        : `RLS is enabled on ${enabledCount} out of ${data.length} tables`,
+        ? `RLS is enabled on all ${tableData.length} tables`
+        : `RLS is enabled on ${enabledCount} out of ${tableData.length} tables`,
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       status: 'error',
-      message: 'Failed to check RLS: ' + error.message,
-      details: error,
+      message: 'Failed to check RLS: ' + errorMessage,
+      details: { error: errorMessage } as JSONValue
     };
   }
 }
@@ -87,7 +128,7 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
     return {
       status: 'error',
       message: 'Invalid Supabase URL. Unable to extract project reference.',
-      details: { url: credentials.url },
+      details: { url: credentials.url } as JSONValue,
     };
   }
 
@@ -107,7 +148,7 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
           currentTier: 'free',
           recommendation: 'Upgrade to Pro plan or higher',
           learnMore: 'https://supabase.com/pricing'
-        },
+        } as JSONValue,
       };
     }
 
@@ -119,7 +160,7 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
           currentTier: 'free',
           recommendation: 'Upgrade to Pro plan or higher',
           learnMore: 'https://supabase.com/pricing'
-        },
+        } as JSONValue,
       };
     }
 
@@ -138,7 +179,7 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
           ...backupInfo,
           tier: subscription.tier,
           configuration: backupInfo.pitr_enabled ? 'enabled' : 'disabled'
-        },
+        } as JSONValue,
       };
     } catch (error) {
       return {
@@ -147,18 +188,15 @@ export async function checkPITR(credentials: SupabaseCredentials): Promise<Check
         details: {
           tier: subscription.tier,
           recommendation: 'Configure PITR in project settings',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        },
+          error: error instanceof Error ? error.message : String(error)
+        } as JSONValue,
       };
     }
   } catch (error) {
     return {
       status: 'error',
       message: 'Failed to check PITR status. Please verify your credentials and try again.',
-      details: {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        recommendation: 'Verify your Management API key and project URL'
-      },
+      details: safeJsonValue(error),
     };
   }
 }

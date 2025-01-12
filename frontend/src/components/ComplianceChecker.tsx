@@ -7,7 +7,8 @@ import {
   checkMFA, 
   checkRLS, 
   checkPITR, 
-  type CheckResult 
+  type CheckResult,
+  type JSONValue 
 } from '@/lib/checks';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import EvidenceLog from '@/components/EvidenceLog';
 import { getChatCompletion, createUserMessage } from '@/lib/gpt';
 
+// Type definitions
 type Results = {
   mfa: CheckResult;
   rls: CheckResult;
@@ -31,47 +33,47 @@ type EvidenceEntry = {
 
 type KeyField = 'serviceRoleKey' | 'managementApiKey';
 
+type ValidationErrors = {
+  url: string;
+  serviceRoleKey: string;
+  managementApiKey: string;
+};
+
+const INITIAL_RESULTS: Results = {
+  mfa: { status: 'pending', message: 'MFA check pending...', details: null },
+  rls: { status: 'pending', message: 'RLS check pending...', details: null },
+  pitr: { status: 'pending', message: 'PITR check pending...', details: null }
+};
+
+const INITIAL_CREDENTIALS: SupabaseCredentials = {
+  url: '',
+  serviceRoleKey: '',
+  managementApiKey: ''
+};
+
+const INITIAL_VALIDATION_ERRORS: ValidationErrors = {
+  url: '',
+  serviceRoleKey: '',
+  managementApiKey: ''
+};
+
 export default function ComplianceChecker() {
+  // State management
   const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState('');
-  const [credentials, setCredentials] = useState<SupabaseCredentials>({
-    url: '',
-    serviceRoleKey: '',
-    managementApiKey: ''
-  });
+  const [credentials, setCredentials] = useState<SupabaseCredentials>(INITIAL_CREDENTIALS);
   const [showKeys, setShowKeys] = useState({
     serviceRoleKey: false,
     managementApiKey: false
   });
-  const [validationErrors, setValidationErrors] = useState({
-    url: '',
-    serviceRoleKey: '',
-    managementApiKey: ''
-  });
-  const [results, setResults] = useState<Results>({
-    mfa: { status: 'pending' },
-    rls: { status: 'pending' },
-    pitr: { status: 'pending' }
-  });
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(INITIAL_VALIDATION_ERRORS);
+  const [results, setResults] = useState<Results>(INITIAL_RESULTS);
   const [evidence, setEvidence] = useState<EvidenceEntry[]>([]);
   const [chatMessages, setChatMessages] = useState<{ user: string; bot?: string }[]>([]);
   const [currentChatInput, setCurrentChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
 
-  const clearEvidence = () => {
-    if (window.confirm('Are you sure you want to clear all evidence logs?')) {
-      setEvidence([]);
-    }
-  };
-
-  const clearChat = () => {
-    if (window.confirm('Are you sure you want to clear the chat history?')) {
-      setChatMessages([]);
-      setCurrentChatInput('');
-    }
-  };
-
+  // Helper functions
   const extractProjectRef = (url: string): string | null => {
     const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
     return match ? match[1] : null;
@@ -98,6 +100,7 @@ export default function ComplianceChecker() {
     return '';
   };
 
+  // Event handlers
   const handleInputChange = (field: string, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
     setValidationErrors(prev => ({
@@ -128,6 +131,19 @@ export default function ComplianceChecker() {
     return true;
   };
 
+  const clearEvidence = () => {
+    if (window.confirm('Are you sure you want to clear all evidence logs?')) {
+      setEvidence([]);
+    }
+  };
+
+  const clearChat = () => {
+    if (window.confirm('Are you sure you want to clear the chat history?')) {
+      setChatMessages([]);
+      setCurrentChatInput('');
+    }
+  };
+
   const handleRunChecks = async () => {
     if (!validateCredentials()) return;
     try {
@@ -139,66 +155,42 @@ export default function ComplianceChecker() {
         serviceRoleKey: credentials.serviceRoleKey,
       });
 
+      const createErrorResult = (e: Error): CheckResult => ({
+        status: 'error',
+        message: e.message,
+        details: {
+          message: e.message,
+          stack: e.stack || '',
+          name: e.name
+        } as JSONValue
+      });
+
       const [mfaResult, rlsResult, pitrResult] = await Promise.all([
-        checkMFA(supabase).catch((e: Error) => ({
-          status: 'error' as const,
-          message: `MFA Check Error: ${e.message}`,
-          details: e.stack,
-        })),
-        checkRLS(supabase).catch((e: Error) => ({
-          status: 'error' as const,
-          message: `RLS Check Error: ${e.message}`,
-          details: e.stack,
-        })),
-        checkPITR({ ...credentials }).catch((e: Error) => ({
-          status: 'error' as const,
-          message: `PITR Check Error: ${e.message}`,
-          details: e.stack,
-        })),
+        checkMFA(supabase).catch((e: Error) => createErrorResult(e)),
+        checkRLS(supabase).catch((e: Error) => createErrorResult(e)),
+        checkPITR({ ...credentials }).catch((e: Error) => createErrorResult(e)),
       ]);
 
       const timestamp = new Date().toISOString();
       setEvidence(prev => [
         ...prev,
-        { timestamp, check: 'MFA', status: mfaResult.status, details: mfaResult.message || '' },
-        { timestamp, check: 'RLS', status: rlsResult.status, details: rlsResult.message || '' },
-        { timestamp, check: 'PITR', status: pitrResult.status, details: pitrResult.message || '' },
+        { timestamp, check: 'MFA', status: mfaResult.status, details: mfaResult.message },
+        { timestamp, check: 'RLS', status: rlsResult.status, details: rlsResult.message },
+        { timestamp, check: 'PITR', status: pitrResult.status, details: pitrResult.message },
       ]);
       setResults({ mfa: mfaResult, rls: rlsResult, pitr: pitrResult });
     } catch (error) {
       setError(`Failed to run checks: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  } finally {
+    } finally {
       setLoading(false);
     }
-  };
-
-  const renderCheckDetails = (result: CheckResult) => {
-    if (result.status === 'error') {
-      return (
-        <Alert variant="destructive" className="mt-2">
-          <AlertDescription>
-            {result.message || 'An error occurred during the check'}
-            {result.details && (
-              <details className="mt-2">
-                <summary className="cursor-pointer">Technical Details</summary>
-                <pre className="mt-2 whitespace-pre-wrap text-sm">
-                  {JSON.stringify(result.details, null, 2)}
-                </pre>
-              </details>
-            )}
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    return result.message && <p className="mt-2 text-sm text-gray-400">{result.message}</p>;
   };
 
   const handleSendChat = async () => {
     if (!currentChatInput.trim()) return;
 
     const userMessage = { user: currentChatInput };
-    setChatMessages((prev) => [...prev, userMessage]);
+    setChatMessages(prev => [...prev, userMessage]);
     setCurrentChatInput('');
     setChatLoading(true);
 
@@ -206,23 +198,70 @@ export default function ComplianceChecker() {
       const botResponse = await getChatCompletion([
         createUserMessage(currentChatInput),
       ]);
-      setChatMessages((prev) => [...prev, { user: currentChatInput, bot: botResponse.content }]);
+      setChatMessages(prev => [...prev, { user: currentChatInput, bot: botResponse.content }]);
     } catch (error) {
       console.error('Error fetching chat response:', error);
-      setChatMessages((prev) => [...prev, { user: currentChatInput, bot: 'Error processing your request.' }]);
+      setChatMessages(prev => [...prev, { user: currentChatInput, bot: 'Error processing your request.' }]);
     } finally {
       setChatLoading(false);
     }
   };
 
+  // Render functions
+  const renderCheckDetails = (result: CheckResult) => {
+    if (result.status === 'error') {
+      return (
+        <Alert variant="destructive" className="mt-2">
+          <AlertDescription>
+            {result.message}
+            <details className="mt-2">
+              <summary className="cursor-pointer">Technical Details</summary>
+              <pre className="mt-2 whitespace-pre-wrap text-sm">
+                {JSON.stringify(result.details, null, 2)}
+              </pre>
+            </details>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return <p className="mt-2 text-sm text-gray-400">{result.message}</p>;
+  };
+
+  const renderCheckStatus = (key: string, result: CheckResult) => (
+    <div key={key} className="border border-gray-700 rounded-lg p-4 bg-gray-800/30">
+      <h3 className="text-lg font-bold text-white mb-2">
+        {key === 'mfa' && 'Multi-Factor Authentication (MFA)'}
+        {key === 'rls' && 'Row Level Security (RLS)'}
+        {key === 'pitr' && 'Point in Time Recovery (PITR)'}
+      </h3>
+      <div
+        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+          result.status === 'pass'
+            ? 'bg-green-900/50 text-green-200'
+            : result.status === 'fail'
+            ? 'bg-red-900/50 text-red-200'
+            : result.status === 'error'
+            ? 'bg-yellow-900/50 text-yellow-200'
+            : 'bg-gray-700/50 text-gray-200'
+        }`}
+      >
+        Status: {result.status}
+      </div>
+      {renderCheckDetails(result)}
+    </div>
+  );
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Credentials Card */}
         <Card className="mb-8 card-override">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-white">Supabase Project Credentials</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Project URL Input */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Project URL</label>
               <div className="relative">
@@ -240,6 +279,7 @@ export default function ComplianceChecker() {
               </div>
             </div>
 
+            {/* Service Role Key Input */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Service Role Key</label>
               <div className="relative">
@@ -255,7 +295,7 @@ export default function ComplianceChecker() {
                     type="button"
                     variant="ghost"
                     className="ml-2"
-                    onClick={() => toggleKeyVisibility('serviceRoleKey' as KeyField)}
+                    onClick={() => toggleKeyVisibility('serviceRoleKey')}
                   >
                     {showKeys.serviceRoleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -268,6 +308,7 @@ export default function ComplianceChecker() {
               </div>
             </div>
 
+            {/* Management API Key Input */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Management API Key</label>
               <div className="relative">
@@ -306,39 +347,20 @@ export default function ComplianceChecker() {
           </CardContent>
         </Card>
 
+        {/* Results Card */}
         <Card className="card-override">
           <CardHeader>
             <CardTitle className="text-white">Compliance Status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {Object.entries(results).map(([key, result]) => (
-              <div key={key} className="border border-gray-700 rounded-lg p-4 bg-gray-800/30">
-                <h3 className="text-lg font-bold text-white mb-2">
-                  {key === 'mfa' && 'Multi-Factor Authentication (MFA)'}
-                  {key === 'rls' && 'Row Level Security (RLS)'}
-                  {key === 'pitr' && 'Point in Time Recovery (PITR)'}
-                </h3>
-                <div
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    result.status === 'pass'
-                      ? 'bg-green-900/50 text-green-200'
-                      : result.status === 'fail'
-                      ? 'bg-red-900/50 text-red-200'
-                      : result.status === 'error'
-                      ? 'bg-yellow-900/50 text-yellow-200'
-                      : 'bg-gray-700/50 text-gray-200'
-                  }`}
-                >
-                  Status: {result.status}
-                </div>
-                {renderCheckDetails(result)}
-              </div>
-            ))}
+            {Object.entries(results).map(([key, result]) => renderCheckStatus(key, result))}
           </CardContent>
         </Card>
 
+        {/* Evidence Log */}
         <EvidenceLog evidence={evidence} onClearEvidence={clearEvidence} />
 
+        {/* Chat Card */}
         <Card className="mt-8 card-override">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-white">Assistant Chatbot</CardTitle>
@@ -353,7 +375,7 @@ export default function ComplianceChecker() {
             <div className="space-y-2">
               {chatMessages.map((msg, idx) => (
                 <div key={idx} className="p-3 rounded-lg bg-gray-800/30">
-                  <p className="text-white"><strong>User:</strong> {msg.user}</p>
+                 <p className="text-white"><strong>User:</strong> {msg.user}</p>
                   {msg.bot && <p className="text-gray-300 mt-2"><strong>Assistant:</strong> {msg.bot}</p>}
                 </div>
               ))}
@@ -376,6 +398,13 @@ export default function ComplianceChecker() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Error Display */}
+        {error && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );
