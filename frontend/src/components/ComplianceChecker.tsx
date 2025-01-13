@@ -249,7 +249,7 @@ export default function ComplianceChecker() {
   );
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="p-6">
       <div className="max-w-4xl mx-auto">
         {/* Credentials Card */}
         <Card className="mb-8 card-override">
