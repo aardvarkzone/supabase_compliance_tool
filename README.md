@@ -8,6 +8,7 @@ A web application for verifying and enforcing security compliance requirements i
 
 ### Project Credentials Screen
 ![Project Credentials](./assets/readme0.jpg)
+- (Fake credentials 😊)
 
 ### Compliance Status Dashboard 
 ![Compliance Status](./assets/readme1.jpg)
@@ -77,6 +78,9 @@ OPENAI_API_KEY=your_api_key_here  # Get this from https://platform.openai.com/ap
 ```
 
 5. Run the development server:
+```bash
+cd frontend
+```
 ```bash
 npm run dev
 ```
